@@ -34,7 +34,7 @@ const geocoder = new CachedLocationProvider(openMeteo);
 
 const server = new McpServer({
   name: "weather-mcp",
-  version: "0.2.0",
+  version: "0.2.1",
 });
 
 const latitude = z.number().min(-90).max(90).describe("Latitude in decimal degrees, WGS84");
