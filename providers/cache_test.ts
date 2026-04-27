@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { FakeTime } from "@std/testing/time";
-import { CachedWeatherProvider, TtlCache } from "./cache.ts";
+import { CachedLocationProvider, CachedWeatherProvider, TtlCache } from "./cache.ts";
+import { everywhere } from "./coverage.ts";
 import type {
   Coordinates,
   CurrentConditions,
@@ -8,6 +9,7 @@ import type {
   HourlyForecast,
   LocationMatch,
   LocationProvider,
+  ProviderTier,
   WeatherProvider,
 } from "./types.ts";
 
@@ -31,20 +33,23 @@ Deno.test("TtlCache evicts entries past their TTL", () => {
   assertEquals(cache.get("k"), undefined);
 });
 
-class StubProvider implements WeatherProvider, LocationProvider {
+class StubWeatherProvider implements WeatherProvider {
   readonly name = "stub";
+  readonly tier: ProviderTier = "baseline";
+  readonly priority = 1;
   readonly weight = 1;
+  readonly coverage = everywhere;
   forecastCalls = 0;
   hourlyCalls = 0;
   currentCalls = 0;
-  locationCalls = 0;
 
   getForecast(coords: Coordinates, _days: number): Promise<Forecast> {
     this.forecastCalls++;
     return Promise.resolve({
-      provider: this.name,
+      contributingProviders: [this.name],
+      failedProviders: [],
       location: coords,
-      timezone: "UTC",
+      timezone: "GMT",
       days: [],
     });
   }
@@ -52,9 +57,10 @@ class StubProvider implements WeatherProvider, LocationProvider {
   getHourlyForecast(coords: Coordinates, _hours: number): Promise<HourlyForecast> {
     this.hourlyCalls++;
     return Promise.resolve({
-      provider: this.name,
+      contributingProviders: [this.name],
+      failedProviders: [],
       location: coords,
-      timezone: "UTC",
+      timezone: "GMT",
       hours: [],
     });
   }
@@ -62,9 +68,10 @@ class StubProvider implements WeatherProvider, LocationProvider {
   getCurrentConditions(coords: Coordinates): Promise<CurrentConditions> {
     this.currentCalls++;
     return Promise.resolve({
-      provider: this.name,
+      contributingProviders: [this.name],
+      failedProviders: [],
       location: coords,
-      timezone: "UTC",
+      timezone: "GMT",
       observedAt: "now",
       isDay: null,
       temperatureC: null,
@@ -80,6 +87,11 @@ class StubProvider implements WeatherProvider, LocationProvider {
       weatherLabel: null,
     });
   }
+}
+
+class StubLocationProvider implements LocationProvider {
+  readonly name = "stub-loc";
+  locationCalls = 0;
 
   findLocation(_query: string, _count: number): Promise<LocationMatch[]> {
     this.locationCalls++;
@@ -88,7 +100,7 @@ class StubProvider implements WeatherProvider, LocationProvider {
 }
 
 Deno.test("CachedWeatherProvider deduplicates identical forecast requests", async () => {
-  const inner = new StubProvider();
+  const inner = new StubWeatherProvider();
   const cached = new CachedWeatherProvider(inner);
 
   await cached.getForecast({ latitude: 59.33, longitude: 18.07 }, 3);
@@ -98,7 +110,7 @@ Deno.test("CachedWeatherProvider deduplicates identical forecast requests", asyn
 });
 
 Deno.test("CachedWeatherProvider quantizes coordinates for cache keys", async () => {
-  const inner = new StubProvider();
+  const inner = new StubWeatherProvider();
   const cached = new CachedWeatherProvider(inner);
 
   // Both round to (59.33, 18.07) at 2 decimal places
@@ -109,7 +121,7 @@ Deno.test("CachedWeatherProvider quantizes coordinates for cache keys", async ()
 });
 
 Deno.test("CachedWeatherProvider keys forecast cache by days", async () => {
-  const inner = new StubProvider();
+  const inner = new StubWeatherProvider();
   const cached = new CachedWeatherProvider(inner);
 
   await cached.getForecast({ latitude: 59.33, longitude: 18.07 }, 3);
@@ -119,7 +131,7 @@ Deno.test("CachedWeatherProvider keys forecast cache by days", async () => {
 });
 
 Deno.test("CachedWeatherProvider keys hourly cache by hours", async () => {
-  const inner = new StubProvider();
+  const inner = new StubWeatherProvider();
   const cached = new CachedWeatherProvider(inner);
 
   await cached.getHourlyForecast({ latitude: 59.33, longitude: 18.07 }, 24);
@@ -129,7 +141,7 @@ Deno.test("CachedWeatherProvider keys hourly cache by hours", async () => {
 });
 
 Deno.test("CachedWeatherProvider deduplicates current-conditions requests", async () => {
-  const inner = new StubProvider();
+  const inner = new StubWeatherProvider();
   const cached = new CachedWeatherProvider(inner);
 
   await cached.getCurrentConditions({ latitude: 59.33, longitude: 18.07 });
@@ -138,20 +150,9 @@ Deno.test("CachedWeatherProvider deduplicates current-conditions requests", asyn
   assertEquals(inner.currentCalls, 1);
 });
 
-Deno.test("CachedWeatherProvider normalizes location queries case-insensitively and trims whitespace", async () => {
-  const inner = new StubProvider();
-  const cached = new CachedWeatherProvider(inner);
-
-  await cached.findLocation("Stockholm", 5);
-  await cached.findLocation("stockholm", 5);
-  await cached.findLocation("  STOCKHOLM  ", 5);
-
-  assertEquals(inner.locationCalls, 1);
-});
-
 Deno.test("CachedWeatherProvider expires forecast entries after TTL", async () => {
   using time = new FakeTime();
-  const inner = new StubProvider();
+  const inner = new StubWeatherProvider();
   const cached = new CachedWeatherProvider(inner);
 
   await cached.getForecast({ latitude: 0, longitude: 0 }, 1);
@@ -162,10 +163,34 @@ Deno.test("CachedWeatherProvider expires forecast entries after TTL", async () =
   assertEquals(inner.forecastCalls, 2);
 });
 
-Deno.test("CachedWeatherProvider exposes inner provider's name and weight", () => {
-  const inner = new StubProvider();
+Deno.test("CachedWeatherProvider exposes inner provider's tier, priority, weight, name, and coverage", () => {
+  const inner = new StubWeatherProvider();
   const cached = new CachedWeatherProvider(inner);
 
   assertEquals(cached.name, "stub");
+  assertEquals(cached.tier, "baseline");
+  assertEquals(cached.priority, 1);
   assertEquals(cached.weight, 1);
+  assertEquals(cached.coverage({ latitude: 0, longitude: 0 }), true);
+});
+
+Deno.test("CachedLocationProvider normalizes queries case-insensitively and trims whitespace", async () => {
+  const inner = new StubLocationProvider();
+  const cached = new CachedLocationProvider(inner);
+
+  await cached.findLocation("Stockholm", 5);
+  await cached.findLocation("stockholm", 5);
+  await cached.findLocation("  STOCKHOLM  ", 5);
+
+  assertEquals(inner.locationCalls, 1);
+});
+
+Deno.test("CachedLocationProvider keys cache by count separately", async () => {
+  const inner = new StubLocationProvider();
+  const cached = new CachedLocationProvider(inner);
+
+  await cached.findLocation("Stockholm", 5);
+  await cached.findLocation("Stockholm", 10);
+
+  assertEquals(inner.locationCalls, 2);
 });

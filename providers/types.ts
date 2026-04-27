@@ -3,6 +3,13 @@ export interface Coordinates {
   longitude: number;
 }
 
+export type ProviderTier = "baseline" | "regional";
+
+export interface ProviderFailure {
+  name: string;
+  error: string;
+}
+
 export interface DailyForecastEntry {
   date: string;
   temperatureMaxC: number | null;
@@ -26,7 +33,8 @@ export interface DailyForecastEntry {
 }
 
 export interface Forecast {
-  provider: string;
+  contributingProviders: string[];
+  failedProviders: ProviderFailure[];
   location: Coordinates;
   timezone: string;
   days: DailyForecastEntry[];
@@ -54,14 +62,16 @@ export interface HourlyForecastEntry {
 }
 
 export interface HourlyForecast {
-  provider: string;
+  contributingProviders: string[];
+  failedProviders: ProviderFailure[];
   location: Coordinates;
   timezone: string;
   hours: HourlyForecastEntry[];
 }
 
 export interface CurrentConditions {
-  provider: string;
+  contributingProviders: string[];
+  failedProviders: ProviderFailure[];
   location: Coordinates;
   timezone: string;
   observedAt: string;
@@ -95,6 +105,9 @@ export interface LocationMatch {
 export interface WeatherProvider {
   readonly name: string;
   readonly weight: number;
+  readonly tier: ProviderTier;
+  readonly priority: number;
+  coverage(coords: Coordinates): boolean;
   getForecast(coords: Coordinates, days: number): Promise<Forecast>;
   getHourlyForecast(coords: Coordinates, hours: number): Promise<HourlyForecast>;
   getCurrentConditions(coords: Coordinates): Promise<CurrentConditions>;

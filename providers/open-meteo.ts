@@ -1,4 +1,5 @@
 import { describeWeatherCode } from "./wmo.ts";
+import { type CoverageFn, everywhere } from "./coverage.ts";
 import type {
   Coordinates,
   CurrentConditions,
@@ -8,6 +9,7 @@ import type {
   HourlyForecastEntry,
   LocationMatch,
   LocationProvider,
+  ProviderTier,
   WeatherProvider,
 } from "./types.ts";
 
@@ -149,10 +151,14 @@ interface OpenMeteoGeocodingResponse {
 
 export class OpenMeteoProvider implements WeatherProvider, LocationProvider {
   readonly name = "open-meteo";
+  readonly tier: ProviderTier = "baseline";
   readonly weight: number;
+  readonly priority: number;
+  readonly coverage: CoverageFn = everywhere;
 
-  constructor(weight = 1) {
-    this.weight = weight;
+  constructor(opts: { weight?: number; priority?: number } = {}) {
+    this.weight = opts.weight ?? 1;
+    this.priority = opts.priority ?? 1;
   }
 
   async getForecast(coords: Coordinates, days: number): Promise<Forecast> {
@@ -162,7 +168,7 @@ export class OpenMeteoProvider implements WeatherProvider, LocationProvider {
     url.searchParams.set("forecast_days", String(days));
     url.searchParams.set("daily", DAILY_FIELDS.join(","));
     url.searchParams.set("wind_speed_unit", "ms");
-    url.searchParams.set("timezone", "auto");
+    url.searchParams.set("timezone", "GMT");
 
     const data = await fetchJson<OpenMeteoForecastResponse>(url);
     const d = data.daily;
@@ -193,7 +199,8 @@ export class OpenMeteoProvider implements WeatherProvider, LocationProvider {
     });
 
     return {
-      provider: this.name,
+      contributingProviders: [this.name],
+      failedProviders: [],
       location: coords,
       timezone: data.timezone,
       days: entries,
@@ -207,7 +214,7 @@ export class OpenMeteoProvider implements WeatherProvider, LocationProvider {
     url.searchParams.set("forecast_hours", String(hours));
     url.searchParams.set("hourly", HOURLY_FIELDS.join(","));
     url.searchParams.set("wind_speed_unit", "ms");
-    url.searchParams.set("timezone", "auto");
+    url.searchParams.set("timezone", "GMT");
 
     const data = await fetchJson<OpenMeteoHourlyResponse>(url);
     const h = data.hourly;
@@ -238,7 +245,8 @@ export class OpenMeteoProvider implements WeatherProvider, LocationProvider {
     });
 
     return {
-      provider: this.name,
+      contributingProviders: [this.name],
+      failedProviders: [],
       location: coords,
       timezone: data.timezone,
       hours: entries,
@@ -251,14 +259,15 @@ export class OpenMeteoProvider implements WeatherProvider, LocationProvider {
     url.searchParams.set("longitude", String(coords.longitude));
     url.searchParams.set("current", CURRENT_FIELDS.join(","));
     url.searchParams.set("wind_speed_unit", "ms");
-    url.searchParams.set("timezone", "auto");
+    url.searchParams.set("timezone", "GMT");
 
     const data = await fetchJson<OpenMeteoCurrentResponse>(url);
     const c = data.current;
     const code = c.weather_code ?? null;
 
     return {
-      provider: this.name,
+      contributingProviders: [this.name],
+      failedProviders: [],
       location: coords,
       timezone: data.timezone,
       observedAt: c.time,

@@ -5,6 +5,7 @@ import type {
   HourlyForecast,
   LocationMatch,
   LocationProvider,
+  ProviderTier,
   WeatherProvider,
 } from "./types.ts";
 
@@ -47,14 +48,13 @@ function coordKey(c: Coordinates): string {
   return `${roundCoord(c.latitude)},${roundCoord(c.longitude)}`;
 }
 
-export class CachedWeatherProvider implements WeatherProvider, LocationProvider {
-  readonly #inner: WeatherProvider & LocationProvider;
+export class CachedWeatherProvider implements WeatherProvider {
+  readonly #inner: WeatherProvider;
   readonly #current = new TtlCache<CurrentConditions>();
   readonly #forecast = new TtlCache<Forecast>();
   readonly #hourly = new TtlCache<HourlyForecast>();
-  readonly #location = new TtlCache<LocationMatch[]>();
 
-  constructor(inner: WeatherProvider & LocationProvider) {
+  constructor(inner: WeatherProvider) {
     this.#inner = inner;
   }
 
@@ -64,6 +64,18 @@ export class CachedWeatherProvider implements WeatherProvider, LocationProvider 
 
   get weight(): number {
     return this.#inner.weight;
+  }
+
+  get tier(): ProviderTier {
+    return this.#inner.tier;
+  }
+
+  get priority(): number {
+    return this.#inner.priority;
+  }
+
+  coverage(coords: Coordinates): boolean {
+    return this.#inner.coverage(coords);
   }
 
   async getForecast(coords: Coordinates, days: number): Promise<Forecast> {
@@ -92,13 +104,26 @@ export class CachedWeatherProvider implements WeatherProvider, LocationProvider 
     this.#current.set(key, value, CURRENT_TTL_MS);
     return value;
   }
+}
+
+export class CachedLocationProvider implements LocationProvider {
+  readonly #inner: LocationProvider;
+  readonly #cache = new TtlCache<LocationMatch[]>();
+
+  constructor(inner: LocationProvider) {
+    this.#inner = inner;
+  }
+
+  get name(): string {
+    return this.#inner.name;
+  }
 
   async findLocation(query: string, count: number): Promise<LocationMatch[]> {
     const key = `${query.trim().toLowerCase()}|${count}`;
-    const hit = this.#location.get(key);
+    const hit = this.#cache.get(key);
     if (hit) return hit;
     const value = await this.#inner.findLocation(query, count);
-    this.#location.set(key, value, LOCATION_TTL_MS);
+    this.#cache.set(key, value, LOCATION_TTL_MS);
     return value;
   }
 }

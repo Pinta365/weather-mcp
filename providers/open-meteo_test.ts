@@ -27,7 +27,7 @@ function restoreFetch(): void {
 
 Deno.test("getForecast hits api.open-meteo.com with the expected params and parses the response", async () => {
   const captured = stubFetch(() => ({
-    timezone: "Europe/Stockholm",
+    timezone: "GMT",
     daily: {
       time: ["2026-04-25", "2026-04-26"],
       weather_code: [3, 61],
@@ -62,11 +62,12 @@ Deno.test("getForecast hits api.open-meteo.com with the expected params and pars
     assertEquals(url.searchParams.get("longitude"), "18.07");
     assertEquals(url.searchParams.get("forecast_days"), "2");
     assertEquals(url.searchParams.get("wind_speed_unit"), "ms");
-    assertEquals(url.searchParams.get("timezone"), "auto");
+    assertEquals(url.searchParams.get("timezone"), "GMT");
     assertExists(url.searchParams.get("daily"));
 
-    assertEquals(result.provider, "open-meteo");
-    assertEquals(result.timezone, "Europe/Stockholm");
+    assertEquals(result.contributingProviders, ["open-meteo"]);
+    assertEquals(result.failedProviders, []);
+    assertEquals(result.timezone, "GMT");
     assertEquals(result.days.length, 2);
     assertEquals(result.days[0].date, "2026-04-25");
     assertEquals(result.days[0].temperatureMaxC, 12);
@@ -83,7 +84,7 @@ Deno.test("getForecast hits api.open-meteo.com with the expected params and pars
 
 Deno.test("getHourlyForecast uses forecast_hours and parses hourly entries", async () => {
   const captured = stubFetch(() => ({
-    timezone: "Europe/Stockholm",
+    timezone: "GMT",
     hourly: {
       time: ["2026-04-25T11:00", "2026-04-25T12:00"],
       temperature_2m: [10.5, 10.6],
@@ -111,8 +112,10 @@ Deno.test("getHourlyForecast uses forecast_hours and parses hourly entries", asy
 
     const url = captured[0];
     assertEquals(url.searchParams.get("forecast_hours"), "2");
+    assertEquals(url.searchParams.get("timezone"), "GMT");
     assertExists(url.searchParams.get("hourly"));
 
+    assertEquals(result.contributingProviders, ["open-meteo"]);
     assertEquals(result.hours.length, 2);
     assertEquals(result.hours[0].time, "2026-04-25T11:00");
     assertEquals(result.hours[0].temperatureC, 10.5);
@@ -127,7 +130,7 @@ Deno.test("getHourlyForecast uses forecast_hours and parses hourly entries", asy
 
 Deno.test("getHourlyForecast normalizes is_day=0 to false", async () => {
   stubFetch(() => ({
-    timezone: "UTC",
+    timezone: "GMT",
     hourly: {
       time: ["2026-04-25T03:00"],
       temperature_2m: [5],
@@ -161,7 +164,7 @@ Deno.test("getHourlyForecast normalizes is_day=0 to false", async () => {
 
 Deno.test("getCurrentConditions parses current weather and normalizes is_day to boolean", async () => {
   const captured = stubFetch(() => ({
-    timezone: "Europe/Stockholm",
+    timezone: "GMT",
     current: {
       time: "2026-04-25T11:00",
       temperature_2m: 10.5,
@@ -185,6 +188,7 @@ Deno.test("getCurrentConditions parses current weather and normalizes is_day to 
     const url = captured[0];
     assertExists(url.searchParams.get("current"));
 
+    assertEquals(result.contributingProviders, ["open-meteo"]);
     assertEquals(result.observedAt, "2026-04-25T11:00");
     assertEquals(result.isDay, true);
     assertEquals(result.temperatureC, 10.5);
@@ -245,6 +249,13 @@ Deno.test("findLocation returns [] when geocoding has no results", async () => {
   } finally {
     restoreFetch();
   }
+});
+
+Deno.test("OpenMeteoProvider declares baseline tier and global coverage", () => {
+  const provider = new OpenMeteoProvider();
+  assertEquals(provider.tier, "baseline");
+  assertEquals(provider.coverage({ latitude: 0, longitude: 0 }), true);
+  assertEquals(provider.coverage({ latitude: 89, longitude: 179 }), true);
 });
 
 Deno.test("provider throws on non-200 response", async () => {
