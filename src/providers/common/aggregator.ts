@@ -8,7 +8,7 @@ import type {
   HourlyForecastEntry,
   ProviderFailure,
   WeatherProvider,
-} from "./types.ts";
+} from "../../types.ts";
 
 export function selectProviders(
   providers: readonly WeatherProvider[],

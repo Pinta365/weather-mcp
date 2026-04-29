@@ -7,7 +7,7 @@ import type {
   LocationProvider,
   ProviderTier,
   WeatherProvider,
-} from "./types.ts";
+} from "../../types.ts";
 
 const CURRENT_TTL_MS = 10 * 60 * 1000;
 const FORECAST_TTL_MS = 60 * 60 * 1000;

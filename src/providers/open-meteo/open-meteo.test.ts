@@ -1,5 +1,5 @@
 import { assertEquals, assertExists, assertRejects } from "@std/assert";
-import { OpenMeteoProvider } from "./open-meteo.ts";
+import { OpenMeteoProvider } from "./index.ts";
 
 const originalFetch = globalThis.fetch;
 

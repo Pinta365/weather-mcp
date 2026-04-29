@@ -10,7 +10,7 @@ import type {
   HourlyForecastEntry,
   ProviderTier,
   WeatherProvider,
-} from "./types.ts";
+} from "../../types.ts";
 
 function nullDaily(date: string): DailyForecastEntry {
   return {

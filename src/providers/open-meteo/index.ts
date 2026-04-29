@@ -1,5 +1,5 @@
-import { describeWeatherCode } from "./wmo.ts";
-import { type CoverageFn, everywhere } from "./coverage.ts";
+import { describeWeatherCode } from "../common/wmo.ts";
+import { type CoverageFn, everywhere } from "../common/coverage.ts";
 import type {
   Coordinates,
   CurrentConditions,
@@ -11,7 +11,7 @@ import type {
   LocationProvider,
   ProviderTier,
   WeatherProvider,
-} from "./types.ts";
+} from "../../types.ts";
 
 const FORECAST_ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 const GEOCODING_ENDPOINT = "https://geocoding-api.open-meteo.com/v1/search";

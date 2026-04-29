@@ -1,5 +1,5 @@
 import { assertEquals, assertExists } from "@std/assert";
-import { MetNorwayProvider, symbolCodeToWmo } from "./met-norway.ts";
+import { MetNorwayProvider, symbolCodeToWmo } from "./index.ts";
 
 const originalFetch = globalThis.fetch;
 

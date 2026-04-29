@@ -2,12 +2,16 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-import { OpenMeteoProvider } from "./providers/open-meteo.ts";
-import { MetNorwayProvider } from "./providers/met-norway.ts";
-import { SmhiProvider } from "./providers/smhi.ts";
-import { CachedLocationProvider, CachedWeatherProvider } from "./providers/cache.ts";
-import { WeatherAggregator } from "./providers/aggregator.ts";
-import { readWeightsFromEnv } from "./weights.ts";
+import {
+  CachedLocationProvider,
+  CachedWeatherProvider,
+  MetNorwayProvider,
+  OpenMeteoProvider,
+  readWeightsFromEnv,
+  SmhiProvider,
+  VERSION,
+  WeatherAggregator,
+} from "./src/index.ts";
 
 const weights = readWeightsFromEnv();
 
@@ -34,7 +38,7 @@ const geocoder = new CachedLocationProvider(openMeteo);
 
 const server = new McpServer({
   name: "weather-mcp",
-  version: "0.2.1",
+  version: VERSION,
 });
 
 const latitude = z.number().min(-90).max(90).describe("Latitude in decimal degrees, WGS84");
@@ -157,4 +161,3 @@ console.error(
     [openMeteo.name, metNorway.name, smhi.name].join(", ")
   }`,
 );
-

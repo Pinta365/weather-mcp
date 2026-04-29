@@ -1,4 +1,4 @@
-import type { Coordinates } from "./types.ts";
+import type { Coordinates } from "../../types.ts";
 
 export type CoverageFn = (coords: Coordinates) => boolean;
 

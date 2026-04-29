@@ -1,5 +1,5 @@
 import { assertEquals, assertExists } from "@std/assert";
-import { SmhiProvider, symbolCodeToWmo } from "./smhi.ts";
+import { SmhiProvider, symbolCodeToWmo } from "./index.ts";
 
 const originalFetch = globalThis.fetch;
 

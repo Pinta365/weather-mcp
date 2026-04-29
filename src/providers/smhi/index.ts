@@ -1,5 +1,5 @@
-import { describeWeatherCode } from "./wmo.ts";
-import { type CoverageFn, boundingBox, everywhere } from "./coverage.ts";
+import { describeWeatherCode } from "../common/wmo.ts";
+import { type CoverageFn, boundingBox, everywhere } from "../common/coverage.ts";
 import type {
   Coordinates,
   CurrentConditions,
@@ -9,7 +9,7 @@ import type {
   HourlyForecastEntry,
   ProviderTier,
   WeatherProvider,
-} from "./types.ts";
+} from "../../types.ts";
 
 const ENDPOINT_BASE =
   "https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point";

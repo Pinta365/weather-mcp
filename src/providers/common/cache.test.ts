@@ -11,7 +11,7 @@ import type {
   LocationProvider,
   ProviderTier,
   WeatherProvider,
-} from "./types.ts";
+} from "../../types.ts";
 
 Deno.test("TtlCache.get returns undefined for missing keys", () => {
   const cache = new TtlCache<string>();

@@ -1,5 +1,6 @@
-import { describeWeatherCode } from "./wmo.ts";
-import { type CoverageFn, boundingBox, everywhere } from "./coverage.ts";
+import { describeWeatherCode } from "../common/wmo.ts";
+import { type CoverageFn, boundingBox, everywhere } from "../common/coverage.ts";
+import { USER_AGENT } from "../../version.ts";
 import type {
   Coordinates,
   CurrentConditions,
@@ -9,10 +10,9 @@ import type {
   HourlyForecastEntry,
   ProviderTier,
   WeatherProvider,
-} from "./types.ts";
+} from "../../types.ts";
 
 const ENDPOINT = "https://api.met.no/weatherapi/locationforecast/2.0/compact";
-const USER_AGENT = "weather-mcp/0.1 (https://github.com/Pinta365/weathermcp)";
 
 const NORDIC_BBOX: CoverageFn = boundingBox(54, 71.5, 4, 32);
 
